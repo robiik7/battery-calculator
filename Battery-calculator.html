@@ -14,23 +14,17 @@
     .result { margin-top: 20px; padding: 15px; background: #ecf0f1; border-left: 5px solid #2980b9; }
     .battery { width: 100%; height: 40px; background: #ccc; border-radius: 5px; margin-top: 10px; overflow: hidden; }
     .fill { height: 100%; background: green; width: 0%; transition: width 0.3s ease-in-out; }
-    /* Added style for the "Jump to Calculator" link button: */
-    .cta-button { display: inline-block; margin-top: 15px; background: #3498db; color: #fff; text-decoration: none; padding: 10px 20px; border-radius: 5px; text-align: center; }
-    .cta-button:hover { background: #2980b9; }
   </style>
 </head>
 <body>
-  <!-- Added id="calculator" to enable the anchor link target -->
-  <div class="container" id="calculator">
+  <div class="container">
     <h1>Battery Life Calculator</h1>
-    <a href="#calculator" class="cta-button">🔧 Jump to Calculator</a>
-    
     <label for="batteryType">Battery Type</label>
     <select id="batteryType">
       <option value="alkaline">Alkaline</option>
       <option value="nimh">NiMH</option>
     </select>
-    
+
     <label for="batterySize">Battery Size</label>
     <select id="batterySize">
       <option value="AA">AA</option>
@@ -38,18 +32,16 @@
       <option value="9V">9V</option>
       <option value="CR2032">CR2032</option>
     </select>
-    
+
     <label for="voltage">Measured Voltage (V)</label>
     <input type="number" id="voltage" step="0.01" min="0" max="10" placeholder="e.g., 1.42">
-    
+
     <button onclick="calculateLife()">Estimate Battery Life</button>
-    
+
     <div class="result" id="result" style="display:none;">
       <div>Battery Life Estimate: <span id="lifePercent">--%</span></div>
       <div class="battery"><div class="fill" id="fillBar"></div></div>
-      <div style="margin-top:10px;">
-        Recommended Multimeter Setting: <strong id="dialSetting">DC Voltage – 20V</strong>
-      </div>
+      <div style="margin-top:10px;">Recommended Multimeter Setting: <strong id="dialSetting">DC Voltage – 20V</strong></div>
     </div>
   </div>
 
