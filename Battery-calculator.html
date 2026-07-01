@@ -81,6 +81,8 @@
 			transition: opacity 0.2s;
 		}
 
+		button:hover { opacity: 0.92; }
+
 		.btn-main {
 			background: var(--primary);
 			color: white;
@@ -154,7 +156,6 @@
 			color: #166534;
 		}
 
-		/* Cheat Sheet Styling */
 		.cheat-grid {
 			display: grid;
 			grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -170,16 +171,22 @@
 			font-size: 0.75rem;
 		}
 
+		.note {
+			font-size: 0.85rem;
+			color: #64748b;
+			margin-top: 10px;
+		}
+
+		@media (max-width: 650px) {
+			.grid { grid-template-columns: 1fr; }
+			body { padding: 12px; }
+			.card { padding: 18px; }
+		}
+
 		@media print {
-			body * {
-				visibility: hidden;
-			}
-
+			body * { visibility: hidden; }
 			#label-out,
-			#label-out * {
-				visibility: visible;
-			}
-
+			#label-out * { visibility: visible; }
 			#label-out {
 				position: absolute;
 				left: 0;
@@ -188,10 +195,7 @@
 				padding: 10px;
 				width: 200px;
 			}
-
-			.no-print {
-				display: none;
-			}
+			.no-print { display: none; }
 		}
 	</style>
 </head>
@@ -201,21 +205,22 @@
 			<h1>🔬 Diagnostic Station</h1>
 			<div class="grid">
 				<div>
-					<label>Chemistry</label>
+					<label for="type">Chemistry</label>
 					<select id="type" onchange="initSizes()">
-						<option value="liion">Li-ion (Vape/3.7V)</option>
+						<option value="liion">Li-ion (3.7V)</option>
 						<option value="alkaline">Alkaline (1.5V)</option>
 						<option value="nimh">NiMH (1.2V)</option>
 						<option value="coin">Lithium Coin (3V)</option>
 					</select>
 				</div>
 				<div>
-					<label>Voltage (V)</label>
-					<input type="number" id="volts" step="0.01" placeholder="0.00">
+					<label for="volts">Voltage (V)</label>
+					<input type="number" id="volts" step="0.01" placeholder="0.00" inputmode="decimal">
 				</div>
 			</div>
+			<p class="note" id="profile-note">Select a chemistry, measure DC voltage with your multimeter, then enter the reading.</p>
 			<button class="btn-main" onclick="runDiagnostic()">Analyze Battery</button>
-			<div id="result" class="result-box" style="display:none;">
+			<div id="result" class="result-box" style="display:none;" aria-live="polite">
 				<div id="label-out">
 					<div style="font-size: 0.7rem; color: #64748b;" id="timestamp"></div>
 					<div style="font-size: 1.5rem; font-weight: 800;"><span id="out-percent">0</span>%</div>
@@ -229,8 +234,9 @@
 				<button class="btn-print no-print" onclick="window.print()">🖨️ Print Thermal Label</button>
 			</div>
 		</div>
+
 		<div class="card">
-			<div style="display: flex; justify-content: space-between; align-items: center;">
+			<div style="display: flex; justify-content: space-between; align-items: center; gap: 12px;">
 				<h2>📋 Harvest Log</h2>
 				<button class="btn-clear" onclick="clearLog()">Clear All</button>
 			</div>
@@ -248,11 +254,13 @@
 				</table>
 			</div>
 		</div>
+
 		<div class="card">
 			<h2>💡 Cheat Sheet: Voltage Ranges</h2>
 			<div class="cheat-grid" id="cheat-sheet"></div>
 		</div>
 	</div>
+
 	<script>
 		const profiles = {
 			liion: {
@@ -288,73 +296,85 @@
 				steps: [{ v: 3.1, p: 100 }, { v: 3.0, p: 90 }, { v: 2.8, p: 40 }, { v: 2.5, p: 10 }]
 			}
 		};
-		let harvestLog = JSON.parse(localStorage.getItem('vapeHarvestLog')) || [];
+
+		let harvestLog = JSON.parse(localStorage.getItem('batteryHarvestLog')) || [];
 
 		function init() {
 			renderLog();
 			renderCheatSheet();
+			initSizes();
+		}
+
+		function initSizes() {
+			const type = document.getElementById('type').value;
+			const profile = profiles[type];
+			document.getElementById('profile-note').textContent = `${profile.name}: full ≈ ${profile.full}V, nominal ≈ ${profile.nom}V, low/dead ≈ ${profile.dead}V. Recommended meter range: ${profile.dial}.`;
+			document.getElementById('dial').textContent = profile.dial;
 		}
 
 		function renderCheatSheet() {
 			const container = document.getElementById('cheat-sheet');
-			container.innerHTML = Object.entries(profiles).map(([id, data]) => `
-    <div class="cheat-item">
-      <b>${data.name}</b><br>
-      Full: ${data.full}V<br>
-      Dead: ${data.dead}V
-    </div>
-  `).join('');
+			container.innerHTML = Object.entries(profiles).map(([id, data]) =>
+				'<div class="cheat-item"><b>' + data.name + '</b><br>Full: ' + data.full + 'V<br>Nominal: ' + data.nom + 'V<br>Low: ' + data.dead + 'V</div>'
+			).join('');
 		}
 
 		function runDiagnostic() {
 			const v = parseFloat(document.getElementById('volts').value);
 			const type = document.getElementById('type').value;
 			const profile = profiles[type];
-			if (isNaN(v)) return;
+
+			if (isNaN(v)) {
+				alert('Please enter a valid voltage reading.');
+				return;
+			}
+
 			let percent = 0;
 			for (let step of profile.steps) {
-				if (v >= step.v) { percent = step.p; break; }
+				if (v >= step.v) {
+					percent = step.p;
+					break;
+				}
 			}
-			// Update UI
+
 			document.getElementById('result').style.display = 'block';
 			document.getElementById('out-percent').innerText = percent;
 			document.getElementById('out-desc').innerText = `${profile.name} @ ${v}V`;
 			document.getElementById('timestamp').innerText = new Date().toLocaleTimeString();
+			document.getElementById('dial').innerText = profile.dial;
+
 			const fill = document.getElementById('fill');
 			fill.style.width = percent + '%';
 			fill.style.background = percent > 70 ? '#16a34a' : percent > 30 ? '#ea580c' : '#dc2626';
-			// Storage Logic for Li-ion
+
 			const storage = document.getElementById('storage-status');
 			if (type === 'liion') {
 				const isGood = v >= 3.75 && v <= 3.9;
-				storage.innerHTML = isGood ? '<span class="badge badge-storage">✓ Ready for Storage</span>' :
-					'<span style="color:red; font-size:0.7rem;">! Aim for 3.8V</span>';
-			} else { storage.innerHTML = ''; }
-			// Save to Log
+				storage.innerHTML = isGood ? '<span class="badge badge-storage">✓ Storage Range</span>' : '<span style="color:#dc2626; font-size:0.7rem;">Aim near 3.8V for storage</span>';
+			} else {
+				storage.innerHTML = '';
+			}
+
 			const entry = { time: new Date().toLocaleTimeString(), type: profile.name, v: v, p: percent };
 			harvestLog.unshift(entry);
 			if (harvestLog.length > 10) harvestLog.pop();
-			localStorage.setItem('vapeHarvestLog', JSON.stringify(harvestLog));
+			localStorage.setItem('batteryHarvestLog', JSON.stringify(harvestLog));
 			renderLog();
 		}
 
 		function renderLog() {
 			const body = document.getElementById('log-body');
-			body.innerHTML = harvestLog.map(e => `
-    <tr>
-      <td>${e.time}</td>
-      <td>${e.type}</td>
-      <td>${e.v}V</td>
-      <td><b>${e.p}%</b></td>
-    </tr>
-  `).join('');
+			body.innerHTML = harvestLog.map(e =>
+				'<tr><td>' + e.time + '</td><td>' + e.type + '</td><td>' + e.v + 'V</td><td><b>' + e.p + '%</b></td></tr>'
+			).join('');
 		}
 
 		function clearLog() {
 			harvestLog = [];
-			localStorage.removeItem('vapeHarvestLog');
+			localStorage.removeItem('batteryHarvestLog');
 			renderLog();
 		}
+
 		init();
 	</script>
 </body>
